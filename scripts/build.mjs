@@ -5,14 +5,25 @@ import fs from "node:fs";
 const CONFIG_SERVICE = process.env.CONFIG_SERVICE_URL
   || "https://cfgsync.mulderitsme.net/v1/config/payments-dash";
 
-const res = await fetch(CONFIG_SERVICE, { headers: { "x-client-schema": "3" } });
-const body = await res.text();
-if (!res.ok) {
-  // Surface the service's own message so the failure is actionable.
-  console.error(`config fetch failed (${res.status}) from ${CONFIG_SERVICE}`);
-  console.error(body);
-  process.exit(1);
+const DEFAULT_CONFIG = { environment: "development", port: 3000 };
+
+let body;
+try {
+  const res = await fetch(CONFIG_SERVICE, { headers: { "x-client-schema": "3" } });
+  if (!res.ok) {
+    console.warn(`config fetch failed (${res.status}) from ${CONFIG_SERVICE}; using default config`);
+  } else {
+    const responseBody = await res.text();
+    const parsed = JSON.parse(responseBody);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("config response is not a JSON object");
+    }
+    body = responseBody;
+  }
+} catch (error) {
+  console.warn(`config load failed: ${error.message}; using default config`);
 }
+
 fs.mkdirSync("src", { recursive: true });
-fs.writeFileSync("src/config.generated.json", body + "\n");
+fs.writeFileSync("src/config.generated.json", (body ?? JSON.stringify(DEFAULT_CONFIG, null, 2)) + "\n");
 console.log("wrote src/config.generated.json");

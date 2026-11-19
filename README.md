@@ -12,5 +12,5 @@ npm start
 ```
 
 `npm run build` writes `src/config.generated.json` from the central config
-service. If the config client is out of date the build step prints the service's
-message with the recovery instruction.
+service. If the service is unavailable or returns an incompatible config, the
+build falls back to a local default so the app can still start.
